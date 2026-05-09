@@ -35,6 +35,7 @@ The main workflow is `Build Firmware`.
 
 It is optimized for GitHub-hosted runners by:
 
+- using a shallow OpenWrt clone (`--depth=1`)
 - caching `dl/` downloads
 - caching `ccache/`
 - keeping build logic in the same script used locally

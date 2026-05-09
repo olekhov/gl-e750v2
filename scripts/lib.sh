@@ -60,16 +60,18 @@ prepare_directories() {
 clone_or_update_openwrt() {
   if [[ ! -d "${SRC_DIR_ABS}/.git" ]]; then
     log "Cloning ${OPENWRT_REPO} at ${OPENWRT_REF}"
-    git clone --filter=blob:none --branch "${OPENWRT_REF}" "${OPENWRT_REPO}" "${SRC_DIR_ABS}"
+    git clone --depth=1 --branch "${OPENWRT_REF}" "${OPENWRT_REPO}" "${SRC_DIR_ABS}"
     return
   fi
 
   log "Refreshing OpenWrt source tree"
-  git -C "${SRC_DIR_ABS}" fetch --tags origin
   if [[ -n "$(git -C "${SRC_DIR_ABS}" status --short)" ]]; then
     die "existing OpenWrt tree at ${SRC_DIR_ABS} has local changes; clean it or use another OPENWRT_WORKDIR"
   fi
+  git -C "${SRC_DIR_ABS}" remote set-url origin "${OPENWRT_REPO}"
+  git -C "${SRC_DIR_ABS}" fetch --depth=1 --tags origin "${OPENWRT_REF}"
   git -C "${SRC_DIR_ABS}" checkout "${OPENWRT_REF}"
+  git -C "${SRC_DIR_ABS}" clean -fd
 }
 
 sync_feeds_config() {
