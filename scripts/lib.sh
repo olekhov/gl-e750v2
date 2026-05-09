@@ -65,13 +65,20 @@ clone_or_update_openwrt() {
   fi
 
   log "Refreshing OpenWrt source tree"
-  if [[ -n "$(git -C "${SRC_DIR_ABS}" status --short)" ]]; then
-    die "existing OpenWrt tree at ${SRC_DIR_ABS} has local changes; clean it or use another OPENWRT_WORKDIR"
-  fi
   git -C "${SRC_DIR_ABS}" remote set-url origin "${OPENWRT_REPO}"
   git -C "${SRC_DIR_ABS}" fetch --depth=1 --tags origin "${OPENWRT_REF}"
-  git -C "${SRC_DIR_ABS}" checkout "${OPENWRT_REF}"
-  git -C "${SRC_DIR_ABS}" clean -fd
+  git -C "${SRC_DIR_ABS}" checkout --force "${OPENWRT_REF}"
+  git -C "${SRC_DIR_ABS}" reset --hard FETCH_HEAD
+}
+
+detect_kernel_patchver() {
+  local target_makefile
+  target_makefile="${SRC_DIR_ABS}/target/linux/${OPENWRT_TARGET}/Makefile"
+  [[ -f "${target_makefile}" ]] || die "missing target makefile: ${target_makefile}"
+
+  export KERNEL_PATCHVER
+  KERNEL_PATCHVER="$(awk -F ':=' '/^KERNEL_PATCHVER:=/ { gsub(/[[:space:]]/, "", $2); print $2; exit }' "${target_makefile}")"
+  [[ -n "${KERNEL_PATCHVER}" ]] || die "failed to detect KERNEL_PATCHVER from ${target_makefile}"
 }
 
 sync_feeds_config() {
@@ -108,11 +115,42 @@ copy_rootfs_files() {
 apply_local_patches() {
   local patch
   shopt -s nullglob
-  for patch in "${ROOT_DIR}"/patches/*.patch; do
-    log "Applying patch $(basename "${patch}")"
+  for patch in "${ROOT_DIR}"/patches/openwrt/*.patch; do
+    log "Applying OpenWrt tree patch $(basename "${patch}")"
     (cd "${SRC_DIR_ABS}" && patch -p1 < "${patch}")
   done
   shopt -u nullglob
+}
+
+install_kernel_patches() {
+  local source_dir target_dir patch
+
+  target_dir="${SRC_DIR_ABS}/target/linux/${OPENWRT_TARGET}/patches-${KERNEL_PATCHVER}"
+  mkdir -p "${target_dir}"
+  find "${target_dir}" -maxdepth 1 -type f -name '9[0-9][0-9]-local-*.patch' -delete
+
+  source_dir="${ROOT_DIR}/patches/kernel/${OPENWRT_TARGET}/${KERNEL_PATCHVER}"
+  if [[ -d "${source_dir}" ]]; then
+    shopt -s nullglob
+    for patch in "${source_dir}"/*.patch; do
+      log "Installing target kernel patch $(basename "${patch}")"
+      cp "${patch}" "${target_dir}/"
+    done
+    shopt -u nullglob
+  fi
+
+  target_dir="${SRC_DIR_ABS}/target/linux/generic/pending-${KERNEL_PATCHVER}"
+  source_dir="${ROOT_DIR}/patches/kernel/generic/${KERNEL_PATCHVER}"
+  if [[ -d "${source_dir}" ]]; then
+    mkdir -p "${target_dir}"
+    find "${target_dir}" -maxdepth 1 -type f -name '9[0-9][0-9]-local-*.patch' -delete
+    shopt -s nullglob
+    for patch in "${source_dir}"/*.patch; do
+      log "Installing generic kernel patch $(basename "${patch}")"
+      cp "${patch}" "${target_dir}/"
+    done
+    shopt -u nullglob
+  fi
 }
 
 prepare_cache_links() {

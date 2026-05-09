@@ -11,9 +11,11 @@ main() {
   require_commands
   prepare_directories
   clone_or_update_openwrt
+  detect_kernel_patchver
   sync_feeds_config
   prepare_cache_links
   restore_optional_build_cache
+  install_kernel_patches
   copy_custom_packages
   update_and_install_feeds
   copy_rootfs_files

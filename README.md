@@ -15,9 +15,16 @@ The default firmware source is pinned to `openwrt/openwrt` tag `v25.12.3`.
 - `config/diffconfig` - OpenWrt diffconfig for `GL.iNet GL-E750`
 - `config/feeds.conf.default` - optional feeds override
 - `files/` - files copied into OpenWrt build root
-- `patches/` - local patches applied before build
+- `patches/openwrt/` - patches against the OpenWrt buildroot tree itself
+- `patches/kernel/<target>/<patchver>/` - kernel patches copied into OpenWrt patchsets
 - `packages/` - optional custom feed packages for SDK/package CI
 - `scripts/build-local.sh` - local build entrypoint
+
+The repository already vendors AmneziaVPN `awg-openwrt` packages under `packages/`:
+
+- `kmod-amneziawg`
+- `amneziawg-tools`
+- `luci-proto-amneziawg`
 
 ## Default Target
 
@@ -54,7 +61,9 @@ Optional inputs:
 
 `Build Packages (SDK)` is separate on purpose.
 
-Use it only when you place custom OpenWrt packages in `packages/<name>/Makefile`. It uses `openwrt/gh-action-sdk`, which is appropriate for package/feed CI, but not for full firmware image builds.
+Use it only when you place custom OpenWrt packages in `packages/<name>/Makefile`.
+It uses `openwrt/gh-action-sdk`, which is appropriate for package/feed CI, but
+not for full firmware image builds.
 
 ## Local Build
 
@@ -80,12 +89,15 @@ Build output will appear under:
 
 ## Local Prerequisites
 
-You need the usual OpenWrt build dependencies installed on Linux. See the OpenWrt build system documentation for the distro-specific package list:
+You need the usual OpenWrt build dependencies installed on Linux. See the
+OpenWrt build system documentation for the distro-specific package list:
 
 - https://openwrt.org/docs/guide-developer/toolchain/use-buildsystem
 - https://openwrt.org/docs/guide-developer/build-system/install-buildsystem
 
-At minimum, expect to need packages such as `build-essential`, `clang`, `flex`, `gawk`, `gcc-multilib`, `g++-multilib`, `gettext`, `git`, `libncurses5-dev`, `libssl-dev`, `python3`, `rsync`, `subversion`, `unzip`, `zlib1g-dev`, and `ccache`.
+At minimum, expect to need packages such as `build-essential`, `clang`, `flex`,
+`gawk`, `gcc-multilib`, `g++-multilib`, `gettext`, `git`, `libncurses5-dev`, 
+`libssl-dev`, `python3`, `rsync`, `subversion`, `unzip`, `zlib1g-dev`, and `ccache`.
 
 ## Customization Points
 
@@ -94,8 +106,45 @@ Use the repo like this:
 1. Edit `config/diffconfig` to change target packages or image features.
 2. Replace `config/feeds.conf.default` if you need custom feeds.
 3. Put rootfs overlay files into `files/`.
-4. Put OpenWrt source patches into `patches/`.
+4. Put buildroot patches into `patches/openwrt/`.
 5. Put custom feed packages into `packages/`.
+
+Default runtime config overlays belong in `files/`, for example:
+
+```text
+files/etc/uci-defaults/99-default-wifi
+```
+
+This repository already uses that mechanism to create two default APs on first boot:
+
+- `openwrt` / `12345678` on 2.4 GHz
+- `openwrt_5g` / `12345678` on 5 GHz
+
+## Included Extra Packages
+
+AmneziaWG is included in the image by default through vendored package
+definitions from `Slava-Shchipunov/awg-openwrt`:
+
+- `kmod-amneziawg`
+- `amneziawg-tools`
+- `luci-proto-amneziawg`
+
+These package definitions live under `packages/` and are copied
+into `package/custom/` during the build.
+
+Kernel driver patches should not be placed into `build_dir/`.
+
+Instead, put them into the repo in the matching OpenWrt patchset path, for example:
+
+```text
+patches/kernel/ath79/6.12/990-local-my-driver-fix.patch
+patches/kernel/generic/6.12/990-local-my-shared-kernel-fix.patch
+```
+
+The build script copies them into `target/linux/<...>/patches-*` before the
+build starts.
+Use the `9xx-local-*.patch` naming pattern for repo-managed kernel patches
+so stale copies can be cleaned safely on the next run.
 
 ## Notes
 
