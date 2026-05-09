@@ -1,0 +1,6 @@
+research
+workdir/
+.cache/
+*.log
+*.tmp
+*.swp

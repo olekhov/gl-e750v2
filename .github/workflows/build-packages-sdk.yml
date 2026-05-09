@@ -1,0 +1,84 @@
+name: Build Packages (SDK)
+
+on:
+  workflow_dispatch:
+    inputs:
+      sdk_arch:
+        description: SDK arch or arch-release, for example mips_24kc-25.12.3
+        required: false
+        default: mips_24kc-25.12.3
+      packages:
+        description: Space-separated package names, empty means all packages in repo
+        required: false
+        default: ""
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/build-packages-sdk.yml"
+      - "packages/**"
+  pull_request:
+    paths:
+      - ".github/workflows/build-packages-sdk.yml"
+      - "packages/**"
+
+permissions:
+  contents: read
+
+jobs:
+  detect:
+    runs-on: ubuntu-24.04
+    outputs:
+      has_packages: ${{ steps.detect.outputs.has_packages }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Detect package feed content
+        id: detect
+        run: |
+          if find packages -mindepth 2 -name Makefile -print -quit | grep -q .; then
+            echo "has_packages=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_packages=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  build:
+    needs: detect
+    if: needs.detect.outputs.has_packages == 'true'
+    runs-on: ubuntu-24.04
+    env:
+      ARCH: ${{ inputs.sdk_arch || 'mips_24kc-25.12.3' }}
+      PACKAGES: ${{ inputs.packages || '' }}
+      INDEX: "1"
+      BUILD_LOG: "1"
+      FEED_DIR: ${{ github.workspace }}
+      FEEDNAME: custom
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build package feed with OpenWrt SDK
+        uses: openwrt/gh-action-sdk@main
+
+      - name: Upload package artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: sdk-packages-${{ env.ARCH }}
+          if-no-files-found: error
+          compression-level: 0
+          path: |
+            bin/packages/**/*.ipk
+            bin/packages/**/*.apk
+            bin/packages/**/*.json
+            logs/**
+
+  skip-message:
+    needs: detect
+    if: needs.detect.outputs.has_packages != 'true'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: No packages to build
+        run: echo "No package Makefiles found under packages/"

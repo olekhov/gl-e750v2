@@ -1,0 +1,139 @@
+name: Build Firmware
+
+on:
+  workflow_dispatch:
+    inputs:
+      openwrt_ref:
+        description: OpenWrt tag or branch
+        required: false
+        default: v25.12.3
+      keep_build_dir_cache:
+        description: Cache build_dir and staging_dir too
+        required: false
+        type: boolean
+        default: false
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/build-firmware.yml"
+      - "config/**"
+      - "files/**"
+      - "packages/**"
+      - "patches/**"
+      - "scripts/**"
+      - "README.md"
+  pull_request:
+    paths:
+      - ".github/workflows/build-firmware.yml"
+      - "config/**"
+      - "files/**"
+      - "packages/**"
+      - "patches/**"
+      - "scripts/**"
+      - "README.md"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: firmware-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    env:
+      OPENWRT_REF: ${{ inputs.openwrt_ref || 'v25.12.3' }}
+      KEEP_BUILD_DIR_CACHE: ${{ inputs.keep_build_dir_cache && '1' || '0' }}
+      JOBS: ${{ vars.OPENWRT_BUILD_JOBS || '' }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Free disk space
+        uses: jlumbroso/free-disk-space@v1.3.1
+        with:
+          large-packages: false
+          docker-images: true
+          swap-storage: false
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential clang ccache curl file flex g++ gawk gcc-multilib gettext \
+            git libncurses5-dev libssl-dev python3 python3-distutils rsync subversion \
+            swig time unzip wget zlib1g-dev
+
+      - name: Restore source download cache
+        uses: actions/cache/restore@v4
+        with:
+          path: .cache/openwrt/dl
+          key: ${{ runner.os }}-openwrt-dl-${{ hashFiles('config/feeds.conf.default', 'config/diffconfig') }}
+          restore-keys: |
+            ${{ runner.os }}-openwrt-dl-
+
+      - name: Restore ccache
+        uses: actions/cache/restore@v4
+        with:
+          path: .cache/openwrt/ccache
+          key: ${{ runner.os }}-openwrt-ccache-${{ env.OPENWRT_REF }}-${{ hashFiles('config/diffconfig', 'files/**', 'patches/**', 'packages/**') }}
+          restore-keys: |
+            ${{ runner.os }}-openwrt-ccache-${{ env.OPENWRT_REF }}-
+            ${{ runner.os }}-openwrt-ccache-
+
+      - name: Restore optional build cache
+        if: env.KEEP_BUILD_DIR_CACHE == '1'
+        uses: actions/cache/restore@v4
+        with:
+          path: .cache/openwrt/build
+          key: ${{ runner.os }}-openwrt-build-${{ env.OPENWRT_REF }}-${{ hashFiles('config/diffconfig', 'config/feeds.conf.default') }}
+          restore-keys: |
+            ${{ runner.os }}-openwrt-build-${{ env.OPENWRT_REF }}-
+
+      - name: Build firmware
+        run: ./scripts/build-local.sh
+
+      - name: Show generated images
+        run: find workdir/openwrt/bin/targets -maxdepth 3 -type f | sort
+
+      - name: Save source download cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: .cache/openwrt/dl
+          key: ${{ runner.os }}-openwrt-dl-${{ hashFiles('config/feeds.conf.default', 'config/diffconfig') }}
+
+      - name: Save ccache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: .cache/openwrt/ccache
+          key: ${{ runner.os }}-openwrt-ccache-${{ env.OPENWRT_REF }}-${{ hashFiles('config/diffconfig', 'files/**', 'patches/**', 'packages/**') }}
+
+      - name: Save optional build cache
+        if: always() && env.KEEP_BUILD_DIR_CACHE == '1'
+        uses: actions/cache/save@v4
+        with:
+          path: .cache/openwrt/build
+          key: ${{ runner.os }}-openwrt-build-${{ env.OPENWRT_REF }}-${{ hashFiles('config/diffconfig', 'config/feeds.conf.default') }}
+
+      - name: Upload firmware artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: openwrt-${{ env.OPENWRT_REF }}-glinet_gl-e750
+          if-no-files-found: error
+          compression-level: 0
+          path: |
+            workdir/openwrt/bin/targets/**/*.bin
+            workdir/openwrt/bin/targets/**/*.img*
+            workdir/openwrt/bin/targets/**/*.manifest
+            workdir/openwrt/bin/targets/**/*.buildinfo
+            workdir/openwrt/bin/targets/**/*.json
+            workdir/openwrt/bin/targets/**/*.itb
+            workdir/openwrt/bin/targets/**/*.efi
+            workdir/openwrt/.config
+            workdir/openwrt/.version
