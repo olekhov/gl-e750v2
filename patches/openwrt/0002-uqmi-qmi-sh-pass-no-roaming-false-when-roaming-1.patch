@@ -1,0 +1,46 @@
+From: Vasilii Olekhov <olekhov@gmail.com>
+Subject: [PATCH] uqmi: qmi.sh: set network roaming preference when roaming=1
+
+vanilla qmi.sh accepts the UCI option roaming but never passes it to
+uqmi. uqmi --start-network without --set-network-roaming defaults to
+home-only, which allows the WDS bearer to be established (control plane)
+but blocks user-plane traffic when the modem is in roaming.
+
+Add roaming as a declared proto option and pass
+--set-network-roaming any to --start-network when it is set.
+
+Confirmed fix for Quectel EM060K-GL with a roaming eSIM profile
+(EIOT Club / Proximus) on Cyta (MCC 280/01): user-plane traffic
+was completely absent (TX only, RX zero) without this flag.
+
+--- a/package/network/utils/uqmi/files/lib/netifd/proto/qmi.sh
++++ b/package/network/utils/uqmi/files/lib/netifd/proto/qmi.sh
+@@ -27,6 +27,7 @@
+ 	proto_config_add_boolean sourcefilter
+ 	proto_config_add_boolean delegate
+ 	proto_config_add_boolean autoconnect
++	proto_config_add_boolean roaming
+ 	proto_config_add_int plmn
+ 	proto_config_add_int timeout
+ 	proto_config_add_int mtu
+@@ -47,8 +48,8 @@
+ 	local apn auth delay device modes password pdptype pincode username v6apn
+ 	json_get_vars apn auth delay device modes password pdptype pincode username v6apn
+
+-	local profile v6profile devpath dhcp dhcpv6 autoconnect plmn timeout
+-	json_get_vars profile v6profile devpath dhcp dhcpv6 autoconnect plmn timeout
++	local profile v6profile devpath dhcp dhcpv6 autoconnect roaming plmn timeout
++	json_get_vars profile v6profile devpath dhcp dhcpv6 autoconnect roaming plmn timeout
+
+ 	[ "$timeout" = "" ] && timeout="10"
+
+@@ -362,7 +363,8 @@
+ 			${auth:+--auth-type $auth} \
+ 			${username:+--username $username} \
+ 			${password:+--password $password} \
+-			${autoconnect:+--autoconnect})
++			${autoconnect:+--autoconnect} \
++			${roaming:+--set-network-roaming any})
+
+ 		# pdh_4 is a numeric value on success
+ 		if ! [ "$pdh_4" -eq "$pdh_4" ] 2> /dev/null; then

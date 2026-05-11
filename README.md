@@ -25,6 +25,7 @@ The repository already vendors AmneziaVPN `awg-openwrt` packages under `packages
 - `kmod-amneziawg`
 - `amneziawg-tools`
 - `luci-proto-amneziawg`
+- `luci-app-epm`
 
 ## Default Target
 
@@ -131,6 +132,43 @@ definitions from `Slava-Shchipunov/awg-openwrt`:
 
 These package definitions live under `packages/` and are copied
 into `package/custom/` during the build.
+
+For eSIM management:
+
+- `lpac` comes from the upstream OpenWrt `packages` feed and currently tracks `2.3.0`
+- `luci-app-epm` is vendored locally under `packages/` for testing
+- `curl` is included in the firmware explicitly
+- this repo overrides the upstream `lpac` package locally only to fix the OpenWrt wrapper/env mapping for `uqmi` on `GL-E750`
+- `modemmanager`, `modemmanager-rpcd`, and `luci-proto-modemmanager` are included in the image
+
+## Vendored Package Sources
+
+- `packages/amneziawg-tools`
+  Source: https://github.com/Slava-Shchipunov/awg-openwrt/tree/431f9ceecc1e6bf7fff322330842c25f8164483e/amneziawg-tools
+  Vendored from `awg-openwrt` commit `431f9ceecc1e6bf7fff322330842c25f8164483e`
+  Package version: `1.0.20260223-1`
+  Upstream source used by the package recipe: `amnezia-vpn/amneziawg-tools` tag `v1.0.20260223`
+
+- `packages/kmod-amneziawg`
+  Source: https://github.com/Slava-Shchipunov/awg-openwrt/tree/431f9ceecc1e6bf7fff322330842c25f8164483e/kmod-amneziawg
+  Vendored from `awg-openwrt` commit `431f9ceecc1e6bf7fff322330842c25f8164483e`
+  Package version: `1.0.20260329-1`
+  Upstream source used by the package recipe: `amnezia-vpn/amneziawg-linux-kernel-module` tag `v1.0.20260329-2`
+
+- `packages/luci-proto-amneziawg`
+  Source: https://github.com/Slava-Shchipunov/awg-openwrt/tree/431f9ceecc1e6bf7fff322330842c25f8164483e/luci-proto-amneziawg
+  Vendored from `awg-openwrt` commit `431f9ceecc1e6bf7fff322330842c25f8164483e`
+  Package version: `2.0.4`
+
+- `packages/luci-app-epm`
+  Source: https://github.com/stich86/luci-app-epm/tree/0ec637f55f1c5621bd232496766795b71c798664/luci-app-epm
+  Vendored from `luci-app-epm` commit `0ec637f55f1c5621bd232496766795b71c798664`
+  Package version: `1.0.1`
+
+- `packages/lpac`
+  Source: OpenWrt packages feed `utils/lpac`
+  Local override based on upstream OpenWrt `lpac` package `2.3.0-1`
+  This repo carries only a local wrapper/config adjustment for backend selection and GL-E750 defaults
 
 Kernel driver patches should not be placed into `build_dir/`.
 

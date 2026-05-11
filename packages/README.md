@@ -19,7 +19,9 @@ This repository already vendors:
 - `amneziawg-tools`
 - `kmod-amneziawg`
 - `luci-proto-amneziawg`
+- `luci-app-epm`
 
 Source:
 
 - https://github.com/Slava-Shchipunov/awg-openwrt
+- https://github.com/stich86/luci-app-epm
