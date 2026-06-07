@@ -20,7 +20,7 @@ load_build_env() {
   source "${BUILD_ENV_FILE}"
 
   export OPENWRT_REPO="${OPENWRT_REPO:-https://github.com/openwrt/openwrt.git}"
-  export OPENWRT_REF="${OPENWRT_REF:-v25.12.3}"
+  export OPENWRT_REF="${OPENWRT_REF:-v25.12.4}"
   export OPENWRT_TARGET="${OPENWRT_TARGET:-ath79}"
   export OPENWRT_SUBTARGET="${OPENWRT_SUBTARGET:-nand}"
   export OPENWRT_PROFILE="${OPENWRT_PROFILE:-glinet_gl-e750}"
@@ -104,12 +104,26 @@ copy_custom_packages() {
   fi
 }
 
+clean_custom_packages() {
+  local makefile pkg
+
+  [[ -d "${ROOT_DIR}/packages" ]] || return
+
+  while IFS= read -r makefile; do
+    pkg="$(basename "$(dirname "${makefile}")")"
+    log "Cleaning custom package ${pkg}"
+    (cd "${SRC_DIR_ABS}" && make "package/${pkg}/clean")
+  done < <(find "${ROOT_DIR}/packages" -mindepth 2 -maxdepth 2 -name Makefile | sort)
+}
+
 copy_rootfs_files() {
-  if find "${ROOT_DIR}/files" -mindepth 1 -not -name .gitkeep -print -quit | grep -q .; then
-    log "Copying rootfs overlay files"
-    mkdir -p "${SRC_DIR_ABS}/files"
-    rsync -a "${ROOT_DIR}/files/" "${SRC_DIR_ABS}/files/"
+  if [[ ! -d "${ROOT_DIR}/files" ]]; then
+    return
   fi
+
+  log "Synchronizing rootfs overlay files"
+  mkdir -p "${SRC_DIR_ABS}/files"
+  rsync -a --delete --exclude '.gitkeep' "${ROOT_DIR}/files/" "${SRC_DIR_ABS}/files/"
 }
 
 apply_local_patches() {

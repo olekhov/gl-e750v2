@@ -1,0 +1,11 @@
+#!/bin/sh
+
+[ "$ACTION" = "pressed" ] && state=on
+[ "$ACTION" = "released" ] && state=off
+[ -n "$state" ] || exit 0
+
+logger -t vpn-switch "BUTTON=$BUTTON ACTION=$ACTION state=$state"
+/usr/bin/vpn-switch "$state"
+status=$?
+logger -t vpn-switch "BUTTON=$BUTTON state=$state exit=$status"
+exit "$status"

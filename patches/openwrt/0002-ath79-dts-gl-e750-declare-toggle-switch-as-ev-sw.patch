@@ -1,0 +1,35 @@
+From: Olekhov Vasilii <olekhov@gmail.com>
+Date: Sat, 16 May 2026 18:30:00 +0300
+Subject: [PATCH] ath79: dts: gl-e750: declare toggle switch as EV_SW
+
+The GL.iNet GL-E750 exposes its hardware side switch as a gpio-keys
+input with code BTN_0, but without an explicit linux,input-type.
+
+gpio-button-hotplug defaults such inputs to EV_KEY. That is good enough
+for momentary buttons, but it is not the correct model for a latching
+hardware switch. In practice this prevents userland from reliably
+treating the control as a switch with an initial state.
+
+Mark the "switch" GPIO as EV_SW so OpenWrt reports it as a switch-type
+button hotplug event. This aligns GL-E750 with other OpenWrt devices
+that expose physical mode/VPN sliders through gpio-button-hotplug.
+
+Signed-off-by: Olekhov Vasilii <olekhov@gmail.com>
+---
+ target/linux/ath79/dts/qca9531_glinet_gl-e750.dts | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/target/linux/ath79/dts/qca9531_glinet_gl-e750.dts b/target/linux/ath79/dts/qca9531_glinet_gl-e750.dts
+index xxxxxxx..xxxxxxx 100644
+--- a/target/linux/ath79/dts/qca9531_glinet_gl-e750.dts
++++ b/target/linux/ath79/dts/qca9531_glinet_gl-e750.dts
+@@ -28,6 +28,7 @@
+ 		switch {
+ 			label = "switch";
+ 			linux,code = <BTN_0>;
++			linux,input-type = <EV_SW>;
+ 			gpios = <&gpio 1 GPIO_ACTIVE_LOW>;
+ 		};
+ 	};
+-- 
+2.43.0

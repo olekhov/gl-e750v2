@@ -1,0 +1,7 @@
+config general 'general'
+	option mode 'router'
+
+config mcu 'mcu'
+	option dev '/dev/ttyS0'
+	option baudrate '115200'
+	option oled '1'
