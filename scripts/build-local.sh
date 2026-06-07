@@ -21,6 +21,7 @@ main() {
   copy_rootfs_files
   apply_local_patches
   write_dot_config
+  clean_custom_packages
   download_sources
   build_firmware
   save_optional_build_cache

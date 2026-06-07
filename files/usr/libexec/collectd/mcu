@@ -1,0 +1,38 @@
+#!/bin/sh
+
+interval="${COLLECTD_INTERVAL:-30}"
+interval="${interval%%.*}"
+[ -n "$interval" ] && [ "$interval" -gt 0 ] 2>/dev/null || interval=30
+hostname="${COLLECTD_HOSTNAME:-$(uname -n)}"
+
+while true; do
+	status="$(cat /tmp/mcu-status.json 2>/dev/null)" || {
+		sleep "$interval"
+		continue
+	}
+
+	temperature="$(printf '%s' "$status" | jsonfilter -e '@.temperature')"
+	charge="$(printf '%s' "$status" | jsonfilter -e '@.charge_percent')"
+	charging="$(printf '%s' "$status" | jsonfilter -e '@.charging_status')"
+	fastcharge="$(printf '%s' "$status" | jsonfilter -e '@.fastcharge')"
+	abnormal="$(printf '%s' "$status" | jsonfilter -e '@.abnormal')"
+	cycles="$(printf '%s' "$status" | jsonfilter -e '@.charge_cnt')"
+
+	[ "$abnormal" = "true" ] && abnormal=1
+	[ "$abnormal" = "false" ] && abnormal=0
+
+	[ -n "$temperature" ] &&
+		echo "PUTVAL \"$hostname/mcu/temperature-battery\" interval=$interval N:$temperature"
+	[ -n "$charge" ] &&
+		echo "PUTVAL \"$hostname/mcu/percent-charge\" interval=$interval N:$charge"
+	[ -n "$charging" ] &&
+		echo "PUTVAL \"$hostname/mcu/gauge-charging\" interval=$interval N:$charging"
+	[ -n "$fastcharge" ] &&
+		echo "PUTVAL \"$hostname/mcu/gauge-fastcharge\" interval=$interval N:$fastcharge"
+	[ -n "$abnormal" ] &&
+		echo "PUTVAL \"$hostname/mcu/gauge-abnormal\" interval=$interval N:$abnormal"
+	[ -n "$cycles" ] &&
+		echo "PUTVAL \"$hostname/mcu/gauge-charge_cycles\" interval=$interval N:$cycles"
+
+	sleep "$interval"
+done
