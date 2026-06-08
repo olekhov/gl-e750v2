@@ -1,0 +1,23 @@
+#!/bin/sh
+
+case "$1" in
+	reboot)
+		ubus call mcu system_reboot >/dev/null 2>&1 || exit 0
+		sleep 1
+		;;
+	sysupgrade)
+		ubus call mcu system_update >/dev/null 2>&1 || exit 0
+		sleep 2
+		# Preserve the upgrade screen while procd shuts down other services.
+		/etc/init.d/mcu stop
+		;;
+	factory-reset)
+		ubus call mcu system_reft '{"system":"reft"}' >/dev/null 2>&1 || exit 0
+		sleep 2
+		/etc/init.d/mcu stop
+		;;
+	*)
+		echo "Usage: $0 {reboot|sysupgrade|factory-reset}" >&2
+		exit 2
+		;;
+esac

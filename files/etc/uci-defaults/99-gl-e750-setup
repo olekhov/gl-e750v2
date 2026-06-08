@@ -55,4 +55,7 @@ uci set firewall.lan_wan.dest=wan
 
 uci commit firewall
 
+/etc/init.d/mcu enable
+/etc/init.d/mcu_shutdown enable
+
 exit 0
