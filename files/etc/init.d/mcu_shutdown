@@ -1,0 +1,8 @@
+#!/bin/sh /etc/rc.common
+
+# Run before the mcu service (STOP=9) during normal reboot or poweroff.
+STOP=8
+
+stop() {
+	/usr/libexec/mcu-notify reboot
+}
