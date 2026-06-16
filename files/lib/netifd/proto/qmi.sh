@@ -6,6 +6,48 @@
 	init_proto "$@"
 }
 
+QMI_LOCK_DIR="/var/lock/qmi-control.lock"
+
+qmi_lock_wait() {
+	local timeout="${1:-30}"
+	local elapsed=0
+
+	mkdir -p /var/lock
+
+	while ! mkdir "$QMI_LOCK_DIR" 2>/dev/null; do
+		if [ -f "$QMI_LOCK_DIR/pid" ]; then
+			local pid
+			pid="$(cat "$QMI_LOCK_DIR/pid" 2>/dev/null)"
+			[ -n "$pid" ] && ! kill -0 "$pid" 2>/dev/null && rm -rf "$QMI_LOCK_DIR"
+		fi
+
+		[ "$elapsed" -ge "$timeout" ] && return 1
+		sleep 1
+		elapsed=$((elapsed + 1))
+	done
+
+	echo "$$" > "$QMI_LOCK_DIR/pid"
+	return 0
+}
+
+qmi_unlock() {
+	[ -d "$QMI_LOCK_DIR" ] && rm -rf "$QMI_LOCK_DIR"
+}
+
+uqmi() {
+	local rc
+
+	qmi_lock_wait 30 || {
+		echo "Timed out waiting for QMI control lock" >&2
+		return 1
+	}
+
+	command uqmi "$@"
+	rc=$?
+	qmi_unlock
+	return "$rc"
+}
+
 qmi_json_get() {
 	local payload="$1"
 	local expr="$2"
@@ -109,7 +151,16 @@ qmi_qmicli_start_network() {
 		echo "qmicli fallback: roaming is enabled in UCI; relying on modem registration state"
 	fi
 
-	output="$(qmicli -d "$device" --device-open-proxy --wds-start-network="$cmd_args" --client-no-release-cid 2>&1)" || {
+	qmi_lock_wait 30 || {
+		echo "Timed out waiting for QMI control lock" >&2
+		return 1
+	}
+
+	output="$(command qmicli -d "$device" --device-open-proxy --wds-start-network="$cmd_args" --client-no-release-cid 2>&1)"
+	local rc=$?
+	qmi_unlock
+
+	[ "$rc" -eq 0 ] || {
 		echo "qmicli fallback start-network failed: $output"
 		return 1
 	}
