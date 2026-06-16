@@ -81,8 +81,8 @@ return baseclass.extend({
 			_('Kernel Version'),      boardinfo.kernel,
 			_('Local Time'),          datestr,
 			_('Uptime'),              systeminfo.uptime ? '%t'.format(systeminfo.uptime) : null,
-			_('Battery Charge'),      Number.isFinite(charge) ? '%d %%'.format(charge) : null,
-			_('Battery Temperature'), Number.isFinite(temperature) ? '%.1f °C'.format(temperature) : null,
+			_('Battery Charge'),      Number.isFinite(charge) ? Math.round(charge) + ' %' : null,
+			_('Battery Temperature'), Number.isFinite(temperature) ? temperature.toFixed(1) + ' C' : null,
 			_('Load Average'),        Array.isArray(systeminfo.load) ? '%.2f, %.2f, %.2f'.format(
 				systeminfo.load[0] / 65535.0,
 				systeminfo.load[1] / 65535.0,
