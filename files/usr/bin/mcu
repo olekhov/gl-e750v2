@@ -32,6 +32,8 @@ local sgm41600_path = "/sys/class/power_supply/sgm41600-standalone/device/sgm416
 local aw35615_a_path = "/sys/devices/platform/soc/9c0000.qcom,qupv3_0_geni_se/998000.i2c/i2c-3/3-0022/AW35615-A/"
 local aw35615_b_path = "/sys/devices/platform/soc/9c0000.qcom,qupv3_0_geni_se/980000.i2c/i2c-0/0-0022/AW35615-B/"
 local qmi_dev = "/dev/cdc-wdm0"
+local qmi_lock_dir = "/var/lock/qmi-control.lock"
+local qmi_timeout = 2
 
 local temp_high = {
     enable = false,
@@ -453,8 +455,32 @@ local function get_nginx_port()
     return port and tonumber(port)
 end
 
+local function wan_qmi_is_busy()
+    local wan_st = ubus.call("network.interface.wan", "status", {})
+
+    if not wan_st then
+        return false
+    end
+
+    return wan_st.pending == true
+end
+
 local function uqmi(args)
-    local fh = io.popen("uqmi -d " .. qmi_dev .. " " .. args .. " 2>/dev/null")
+    if wan_qmi_is_busy() then
+        return nil
+    end
+
+    local cmd = "mkdir -p /var/lock; " ..
+        "if [ -f " .. qmi_lock_dir .. "/pid ]; then " ..
+        "pid=$(cat " .. qmi_lock_dir .. "/pid 2>/dev/null); " ..
+        "[ -n \"$pid\" ] && ! kill -0 \"$pid\" 2>/dev/null && rm -rf " .. qmi_lock_dir .. "; " ..
+        "fi; " ..
+        "if mkdir " .. qmi_lock_dir .. " 2>/dev/null; then " ..
+        "echo $$ > " .. qmi_lock_dir .. "/pid; " ..
+        "timeout " .. qmi_timeout .. " uqmi -d " .. qmi_dev .. " " .. args .. "; " ..
+        "rm -rf " .. qmi_lock_dir .. "; " ..
+        "fi 2>/dev/null"
+    local fh = io.popen(cmd)
     if not fh then return nil end
     local s = fh:read("*a")
     fh:close()
