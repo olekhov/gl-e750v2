@@ -1,0 +1,15 @@
+--- a/feeds/passwall_luci/luci-app-passwall2/root/usr/share/passwall2/utils.sh
++++ b/feeds/passwall_luci/luci-app-passwall2/root/usr/share/passwall2/utils.sh
+@@ -417,6 +417,12 @@ run_process_queue() {
+ 			icount=$(busybox pgrep -f "$(echo $cmd_check)" | wc -l)
+ 			if [ $icount = 0 ]; then
+ 				eval $(echo "nohup ${cmd} 2>&1 &") >/dev/null 2>&1 &
++				[ -n "$NO_REC_PROCESS" ] || {
++					mkdir -p $TMP_SCRIPT_FUNC_PATH
++					process_count=$(ls $TMP_SCRIPT_FUNC_PATH | grep -v "^_" | wc -l)
++					process_count=$((process_count + 1))
++					echo "$cmd" > $TMP_SCRIPT_FUNC_PATH/$process_count
++				}
+ 			fi
+ 			rm -rf ${TMP_PROCESS_LIST_PATH}/${filename}
+ 		done
