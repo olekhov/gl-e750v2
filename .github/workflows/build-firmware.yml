@@ -45,7 +45,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 360
     env:
-      OPENWRT_REF: ${{ inputs.openwrt_ref || 'v25.12.3' }}
+      OPENWRT_REF: ${{ inputs.openwrt_ref || 'v25.12.4' }}
       KEEP_BUILD_DIR_CACHE: ${{ inputs.keep_build_dir_cache && '1' || '0' }}
       JOBS: ${{ vars.OPENWRT_BUILD_JOBS || '' }}
     steps:
@@ -79,7 +79,7 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: .cache/openwrt/ccache
-          key: ${{ runner.os }}-openwrt-ccache-${{ env.OPENWRT_REF }}-${{ hashFiles('config/diffconfig', 'files/**', 'patches/**', 'packages/**') }}
+          key: ${{ runner.os }}-openwrt-ccache-${{ env.OPENWRT_REF }}-${{ hashFiles('config/diffconfig', 'patches/**', 'packages/**') }}
           restore-keys: |
             ${{ runner.os }}-openwrt-ccache-${{ env.OPENWRT_REF }}-
             ${{ runner.os }}-openwrt-ccache-
@@ -93,8 +93,15 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-openwrt-build-${{ env.OPENWRT_REF }}-
 
+      - name: Show ccache stats before build
+        run: ccache -s || true
+
       - name: Build firmware
         run: ./scripts/build-local.sh
+
+      - name: Show ccache stats after build
+        if: always()
+        run: ccache -s || true
 
       - name: Show generated images
         run: find workdir/openwrt/bin/targets -maxdepth 3 -type f | sort
@@ -111,7 +118,7 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: .cache/openwrt/ccache
-          key: ${{ runner.os }}-openwrt-ccache-${{ env.OPENWRT_REF }}-${{ hashFiles('config/diffconfig', 'files/**', 'patches/**', 'packages/**') }}
+          key: ${{ runner.os }}-openwrt-ccache-${{ env.OPENWRT_REF }}-${{ hashFiles('config/diffconfig', 'patches/**', 'packages/**') }}
 
       - name: Save optional build cache
         if: always() && env.KEEP_BUILD_DIR_CACHE == '1'
