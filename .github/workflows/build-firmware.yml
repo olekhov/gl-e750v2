@@ -6,7 +6,7 @@ on:
       openwrt_ref:
         description: OpenWrt tag or branch
         required: false
-        default: v25.12.3
+        default: v25.12.4
       keep_build_dir_cache:
         description: Cache build_dir and staging_dir too
         required: false
