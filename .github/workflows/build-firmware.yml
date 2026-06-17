@@ -43,6 +43,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-24.04
+    environment: firmware-build
     timeout-minutes: 360
     env:
       OPENWRT_REF: ${{ inputs.openwrt_ref || 'v25.12.4' }}
