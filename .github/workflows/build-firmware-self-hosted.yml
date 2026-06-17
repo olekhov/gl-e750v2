@@ -1,0 +1,66 @@
+name: Build Firmware (Self-hosted)
+
+on:
+  workflow_dispatch:
+    inputs:
+      openwrt_ref:
+        description: OpenWrt tag or branch
+        required: false
+        default: v25.12.4
+      keep_build_dir_cache:
+        description: Cache build_dir and staging_dir too
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: firmware-self-hosted-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: [self-hosted, linux, openwrt]
+    timeout-minutes: 360
+    env:
+      OPENWRT_REF: ${{ inputs.openwrt_ref || 'v25.12.4' }}
+      KEEP_BUILD_DIR_CACHE: ${{ inputs.keep_build_dir_cache && '1' || '0' }}
+      JOBS: ${{ vars.OPENWRT_BUILD_JOBS || '' }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          clean: false
+
+      - name: Show ccache stats before build
+        run: ccache -s || true
+
+      - name: Build firmware
+        run: ./scripts/build-local.sh
+
+      - name: Show ccache stats after build
+        if: always()
+        run: ccache -s || true
+
+      - name: Show generated images
+        run: find workdir/openwrt/bin/targets -maxdepth 3 -type f | sort
+
+      - name: Upload firmware artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: openwrt-${{ env.OPENWRT_REF }}-glinet_gl-e750-self-hosted
+          if-no-files-found: error
+          compression-level: 0
+          path: |
+            workdir/openwrt/bin/targets/**/*.bin
+            workdir/openwrt/bin/targets/**/*.img*
+            workdir/openwrt/bin/targets/**/*.manifest
+            workdir/openwrt/bin/targets/**/*.buildinfo
+            workdir/openwrt/bin/targets/**/*.json
+            workdir/openwrt/bin/targets/**/*.itb
+            workdir/openwrt/bin/targets/**/*.efi
+            workdir/openwrt/.config
+            workdir/openwrt/.version
