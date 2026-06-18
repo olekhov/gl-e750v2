@@ -95,14 +95,14 @@ jobs:
             ${{ runner.os }}-openwrt-build-${{ env.OPENWRT_REF }}-
 
       - name: Show ccache stats before build
-        run: ccache -s || true
+        run: CCACHE_DIR="$PWD/.cache/openwrt/ccache" ccache -s || true
 
       - name: Build firmware
         run: ./scripts/build-local.sh
 
       - name: Show ccache stats after build
         if: always()
-        run: ccache -s || true
+        run: CCACHE_DIR="$PWD/.cache/openwrt/ccache" ccache -s || true
 
       - name: Show generated images
         run: find workdir/openwrt/bin/targets -maxdepth 3 -type f | sort
