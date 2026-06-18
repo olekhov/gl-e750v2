@@ -11,7 +11,7 @@ on:
         description: Cache build_dir and staging_dir too
         required: false
         type: boolean
-        default: true
+        default: false
 
 permissions:
   contents: read
@@ -35,14 +35,14 @@ jobs:
           clean: false
 
       - name: Show ccache stats before build
-        run: ccache -s || true
+        run: CCACHE_DIR="$PWD/.cache/openwrt/ccache" ccache -s || true
 
       - name: Build firmware
         run: ./scripts/build-local.sh
 
       - name: Show ccache stats after build
         if: always()
-        run: ccache -s || true
+        run: CCACHE_DIR="$PWD/.cache/openwrt/ccache" ccache -s || true
 
       - name: Show generated images
         run: find workdir/openwrt/bin/targets -maxdepth 3 -type f | sort
