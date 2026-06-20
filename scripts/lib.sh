@@ -88,11 +88,27 @@ sync_feeds_config() {
 }
 
 update_and_install_feeds() {
+  reset_feed_worktrees
+
   log "Updating feeds"
   (cd "${SRC_DIR_ABS}" && ./scripts/feeds update -a)
 
+  reset_feed_worktrees
+
   log "Installing feeds"
   (cd "${SRC_DIR_ABS}" && ./scripts/feeds install -a)
+}
+
+reset_feed_worktrees() {
+  local feed
+
+  [[ -d "${SRC_DIR_ABS}/feeds" ]] || return
+
+  while IFS= read -r feed; do
+    log "Resetting feed worktree $(basename "${feed}")"
+    git -C "${feed}" reset --hard
+    git -C "${feed}" clean -fd
+  done < <(find "${SRC_DIR_ABS}/feeds" -mindepth 2 -maxdepth 2 -name .git -type d -printf '%h\n' | sort)
 }
 
 copy_custom_packages() {
