@@ -1,0 +1,5 @@
+
+config 3ginfo
+	option device '/dev/ttyUSB3'
+	option network 'wan'
+	option website 'http://www.btsearch.pl/szukaj.php?mode=std&search='
