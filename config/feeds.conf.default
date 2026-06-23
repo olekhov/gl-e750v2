@@ -1,5 +1,9 @@
-src-git passwall_packages https://github.com/Openwrt-Passwall/openwrt-passwall-packages.git;main
-src-git passwall_luci https://github.com/Openwrt-Passwall/openwrt-passwall2.git;main
+src-git modemband https://github.com/obsy/modemband.git;main
+src-git modemdata https://github.com/obsy/modemdata.git;main
+src-git luci_modemband https://github.com/4IceG/luci-app-modemband.git;main
+src-git luci_modemdata https://github.com/4IceG/luci-app-modemdata.git;main
+src-git luci_3ginfo_lite https://github.com/4IceG/luci-app-3ginfo-lite.git;main
+src-git luci_sms_tool_js https://github.com/4IceG/luci-app-sms-tool-js.git;main
 src-git packages https://github.com/openwrt/packages.git
 src-git luci https://github.com/openwrt/luci.git
 src-git routing https://github.com/openwrt/routing.git
